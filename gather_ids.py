@@ -1,10 +1,8 @@
 
 import requests
-from catalog_parse import get_total_count
-
+from catalog_parse import gather, STORAGE
 
 fil = 'ids.pkl'
-all_threads = []
 rows = 100
 
 def get_next(start):
@@ -13,40 +11,36 @@ def get_next(start):
     # 'https://catalog.data.gov/api/action/package_search?rows=10&start=9'
     # | jq '.result.results[].id'
     # | jq '.result.results[].tags[].display_name'
-    r = requests.get('https://catalog.data.gov/api/action/package_search?rows=%s&start=%s' % (rows, start)).json()
+    r = requests.get('https://catalog.data.gov/api/action/package_search?rows=%s&start=%s' % (rows, start))
     if "The request could not be satisfied." in r.text:
         return None
-    return r['result']['results']
+    return r.json()['result']['results']
 
 def parse_dataset(result):
     r_id = result['id']
     r_tags = [i['display_name'] for i in result['tags']]
+    r_org = result['organization']['id']
 
-    return r_id, r_tags
+    return r_id, r_tags, r_org
 
-def get_id(results_list):
+def get_id(tid, results_list):
     global STORAGE
     if results_list is not None:
         for a, i in enumerate(results_list):
-            i_s, i_t = parse_dataset(i)
+            i_s, i_t, i_o = parse_dataset(i)
             if i_s not in STORAGE.save:
-                STORAGE.save[i_s] = i_t
+                STORAGE.save[i_s] = {
+                    'tags': i_t,
+                    'org': i_o
+                }
+
 
 if __name__ == "__main__":
-    total = get_total_count()
     try:
         STORAGE.restore(fil)
     except:
         pass
 
-    while current*batch < total:
-        if concurrent < 5:
-            t = Work(current, get_next, get_id, fil)
-            all_threads.append(t)
-            t.start()
-            concurrent += 1
-            current += 1
-        for i in all_threads:
-            i.join()
+    gather(get_next, get_id, fil)
 
     STORAGE.backup(fil)

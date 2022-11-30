@@ -11,6 +11,7 @@ batch = 100
 processed = 0
 all_threads = []
 blocked = 0
+current = 0
 
 def get_total_count():
     # Returns the total number of datasets on catalog.data.gov
@@ -43,7 +44,8 @@ class Work(threading.Thread):
         print("Completed...", self.name)
 
 def gather(get_next, l_work, fil):
-    global concurrent, all_threads
+    global current, concurrent, all_threads
+    total = get_total_count()
     while current*batch < total:
         if blocked > 100:
             sys.exit()
@@ -62,10 +64,9 @@ def gather_todo(todo, get_next, l_work, fil):
         print(processed)
         if blocked > 15:
             print('Blocked by Cloudfront')
-            sys.exit()
+            sys.exit(1)
         if concurrent < 20:
             a = todo.pop()
-            print(a)
             if a not in STORAGE.save.keys():
                 t = Work(a, get_next, l_work, fil)
                 all_threads.append(t)
