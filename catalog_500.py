@@ -23,6 +23,13 @@ def save_status(tid, scode):
     if scode is not None:
         STORAGE.save[tid] = scode
 
+def check_solr(start):
+    r = requests.get('https://catalog.data.gov/api/action/package_show?id=%s' % (start))
+    if "The request could not be satisfied." in r.text:
+        return None
+    s = r.status_code
+    return s
+
 
 if __name__ == "__main__":
     try:
